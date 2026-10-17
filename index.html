@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!--Double check this-->
+    <title>Pathological Heatmap Classifier</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --border: #e2e8f0;
+            --text: #1e293b;
+        }
+        body {
+            font-family: Verdana, Geneva, Tahoma, sans-serif;
+            font-weight: bolder;
+            background-color: rgb(59, 3, 59);
+            color: rgb(181, 197, 207);
+            justify-content: center;
+            padding: 2;
+            margin: 0;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <!--Header-->
+    
+    
+    <form action="/upload-endpoint" method="POST" enctype="multipart/form-data">
+        <h1>
+        Please input your image here
+        </h1>
+        <label for="file-upload"> Choose a file to upload:</label>
+        <br>
+        <input type="file" id="file-upload" name="uploaded_file" required><!--Check what type of input files are okay-->
+        
+        <h1>
+            Pretty Please input your search parameters here
+        </h1>
+        <input type="text" id="parameterInput" name="parameters" required>
+        <button type="submit">Start</button>
+    </form> <!--Potentially change took for google-->
+    <br>
+    <h1>Results</h1>
+    <p id="statusMsg"></p>
+    <img id="resultImage"/>
+</body>
+</html>
