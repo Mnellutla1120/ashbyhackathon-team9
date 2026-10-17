@@ -246,3 +246,47 @@ button:active {
         padding: 14px;
     }
 }
+
+/* FIXED SIDE CONTROLS */
+.side-controls {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    right: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 1000;
+    pointer-events: none;
+}
+
+/* Keep the actual buttons clickable */
+.side-controls button {
+    pointer-events: auto;
+    margin: 0;
+    min-height: 44px;
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+    cursor: pointer;
+}
+
+/* HELP BUTTON */
+#help-toggle {
+    padding: 10px 18px;
+    font-size: 14px;
+    border-radius: 4px;
+}
+
+/* SUN / MOON BUTTON */
+#theme-toggle {
+    width: 48px;
+    height: 48px;
+    padding: 0;
+    font-size: 23px;
+    line-height: 1;
+    border-radius: 50%;
+}
+
+/* Keep page content clear of the floating controls */
+body {
+    padding-top: 90px;
+}
