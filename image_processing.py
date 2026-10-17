@@ -53,6 +53,33 @@ def make_placeholder_tiles_b64():
     return tiles
 
 
+from PIL import Image
+import io
+
+def make_tiles_b64(image_path, tile_size=224):
+    image = Image.open(image_path).convert("RGB")
+    width, height = image.size
+
+    tiles = []
+
+    for y in range(0, height - tile_size + 1, tile_size):
+        for x in range(0, width - tile_size + 1, tile_size):
+
+            tile = image.crop((
+                x,
+                y,
+                x + tile_size,
+                y + tile_size
+            ))
+
+            buf = io.BytesIO()
+            tile.save(buf, format="PNG")
+
+            tiles.append(image_bytes_to_b64(buf.getvalue()))
+
+    return tiles
+
+
 def check_health():
     """Fail fast with a clear message instead of a confusing stack trace if
     the endpoint is wrong, the server isn't up yet, or the API key is stale."""
