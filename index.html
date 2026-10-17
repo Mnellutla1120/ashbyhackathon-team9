@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!--Double check this-->
+   <link rel="stylesheet" href="style.css">
     <title>Pathological Heatmap Classifier</title>
     <style>
         :root {
@@ -18,7 +19,7 @@
             background-color: rgb(59, 3, 59);
             color: rgb(181, 197, 207);
             justify-content: center;
-            padding: 2;
+            padding: 2px;
             margin: 0;
             text-align: center;
         }
@@ -40,11 +41,14 @@
             Pretty Please input your search parameters here
         </h1>
         <input type="text" id="parameterInput" name="parameters" required>
-        <button type="submit">Start</button>
+        <button type="submit">Run Image Search →</button>
     </form> <!--Potentially change took for google-->
     <br>
     <h1>Results</h1>
     <p id="statusMsg"></p>
     <img id="resultImage"/>
 </body>
+
+
+
 </html>
