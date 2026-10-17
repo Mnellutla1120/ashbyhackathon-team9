@@ -22,7 +22,11 @@
     </button>
 </div>
 
-
+<dialog id="overlay">
+        <h2>How to use this tool:</h2>
+        <p>Upload a pathology tile image, then describe the tissue type or features you want to find in the search parameters (i.e., tumor regions with dense cell growth). Click <strong>Run Image Search</strong> to identify similar regions in the image. Results will display matching regions highlighted in a heatmap, helping you visualize where the features of interest appear.</p>
+        <button id = "closeBtn">Close</button>
+</dialog>
 
 
     <header>
@@ -84,6 +88,10 @@
         );
     });
 </script>
-
+<script>
+    const dialog = document.getElementById("overlay");
+    document.getElementById("help-toggle").addEventListener('click', () => dialog.showModal());
+    document.getElementById("closeBtn").addEventListener('click', () => dialog.close());
+</script>
 </body>
 </html>
