@@ -1,54 +1,79 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!--Double check this-->
-   <link rel="stylesheet" href="style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
     <title>Pathological Heatmap Classifier</title>
-    <style>
-        :root {
-            --primary: #2563eb;
-            --bg: #f8fafc;
-            --surface: #ffffff;
-            --border: #e2e8f0;
-            --text: #1e293b;
-        }
-        body {
-            font-family: Verdana, Geneva, Tahoma, sans-serif;
-            font-weight: bolder;
-            background-color: rgb(59, 3, 59);
-            color: rgb(181, 197, 207);
-            justify-content: center;
-            padding: 2px;
-            margin: 0;
-            text-align: center;
-        }
-    </style>
 </head>
+
+
 <body>
-    <!--Header-->
-    
-    
-    <form action="/upload-endpoint" method="POST" enctype="multipart/form-data">
-        <h1>
-        Please input your image here
-        </h1>
-        <label for="file-upload"> Choose a file to upload:</label>
-        <br>
-        <input type="file" id="file-upload" name="uploaded_file" required><!--Check what type of input files are okay-->
-        
-        <h1>
-            Pretty Please input your search parameters here
-        </h1>
-        <input type="text" id="parameterInput" name="parameters" required>
-        <button type="submit">Run Image Search →</button>
-    </form> <!--Potentially change took for google-->
-    <br>
-    <h1>Results</h1>
-    <p id="statusMsg"></p>
-    <img id="resultImage"/>
+
+<button id="theme-toggle" type="button" aria-label="Switch to light mode">
+    🌞
+</button>
+
+    <header>
+        <h1>Pathological Heatmap Classifier</h1>
+        <p>Computational Pathology Image Search</p>
+    </header>
+
+
+    <main>
+        <form action="/upload-endpoint" method="POST" enctype="multipart/form-data">
+       
+
+<section class="upload-card tile-upload">
+    <h2>Tile Image</h2>
+    <label for="tile-upload">Upload an existing tile</label>
+    <input
+        type="file"
+        id="tile-upload"
+        name="tile_file"
+        accept="image/*"
+    >
+</section>
+
+
+            <section>
+                <h2>Search Parameters</h2>
+                <label for="parameterInput">Describe the tissue or features to find</label>
+                <input
+                    type="text"
+                    id="parameterInput"
+                    name="parameters"
+                    placeholder="e.g. tumor regions with dense cell growth"
+                    required
+                >
+            </section>
+
+            <button type="submit">Run Image Search</button>
+        </form>
+
+        <section id="results">
+            <h2>Results</h2>
+            <p id="statusMsg">Your search results will appear here.</p>
+            <img id="resultImage" alt="Pathology image search result" hidden>
+        </section>
+    </main>
+
+<script>
+    const themeToggle = document.getElementById("theme-toggle");
+
+    themeToggle.addEventListener("click", function () {
+        document.body.classList.toggle("light-mode");
+
+        const isLight = document.body.classList.contains("light-mode");
+
+        themeToggle.textContent = isLight ? "🌙" : "🌞";
+        themeToggle.setAttribute(
+            "aria-label",
+            isLight ? "Switch to dark mode" : "Switch to light mode"
+        );
+    });
+</script>
+
 </body>
-
-
-
 </html>
