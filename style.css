@@ -16,7 +16,7 @@ body.light-mode {
     color-scheme: light;
     --page-bg: #f3edff;
     --card-bg: #e5dafa;
-    --text-color: #172554;
+    --text-color: #aab2cd;
     --muted-text: #334155;
     --border-color: #b8a8d8;
     --input-bg: #ffffff;
@@ -289,4 +289,26 @@ button:active {
 /* Keep page content clear of the floating controls */
 body {
     padding-top: 90px;
+}
+/* HELP DIALOG */
+#overlay {
+    width: 70%;
+    max-width: 800px;
+    border: 2px solid var(--text-color);
+    border-radius: 6px;
+    padding: 24px;
+    background-color: #111111;
+    color: var(--text-color);
+    text-align: center;
+}
+
+/* Dark background behind the popup */
+#overlay::backdrop {
+    background-color: rgba(0, 0, 0, 0.55);
+}
+@media (max-width: 600px) {
+    #overlay {
+        width: 90%;
+        padding: 16px;
+    }
 }
