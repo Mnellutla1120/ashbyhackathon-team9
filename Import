@@ -1,0 +1,22 @@
+import requests
+from tqdm import tqdm
+
+def download_gdc_slide(file_id: str, output_path: str):
+    url = f"https://api.gdc.cancer.gov/data/{file_id}"
+    response = requests.get(url, stream=True)
+    
+    if response.status_code == 200:
+        total_size = int(response.headers.get("content-length", 0))
+        with open(output_path, "wb") as f, tqdm(
+            desc=output_path, total=total_size, unit="B", unit_scale=True
+        ) as bar:
+            for chunk in response.iter_content(chunk_size=1024 * 1024):
+                if chunk:
+                    f.write(chunk)
+                    bar.update(len(chunk))
+    else:
+        print(f"Failed to download {file_id}: HTTP {response.status_code}")
+
+# Example usage:
+# download_gdc_slide("22a29915-6712-4f7a-8dba-985ae9a1f005", "slide_1.svs")
+download_gdc_slide("32abfee5-daea-4816-8c24-122dbf593aff", "Image3.svs")

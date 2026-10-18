@@ -1,0 +1,11 @@
+from openslide import OpenSlide
+
+# Load the .svs file
+slide = OpenSlide("Image1.svs")
+
+# Print image dimensions at level 0 (highest resolution)
+print("Dimensions (width, height):", slide.dimensions)
+
+# Read a region at level 0 (startX, startY, level, (width, height))
+region = slide.read_region((0, 0), level=0, size=(512, 512))
+region.save("tile.png")

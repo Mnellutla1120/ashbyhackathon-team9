@@ -7,29 +7,32 @@ import openslide
 # Define paths and configuration
 WSI_DIR = "/path/to/your/wsi/files"  # Update this to the directory containing your WSI files
 OUTPUT_DIR = "./output"  # Directory where patches and captions will be saved
-PATCH_SIZE = (672, 672)  # Size of the patch to extract
+PATCH_SIZE = (400, 400)  # Size of the patch to extract
 
 # Ensure output directory exists
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # Load the list of WSIs with positions and captions
-# data = [
-#     {
-#         "WSI_id": "TCGA-22-5474-01Z-00-DX1.8736FB24-7E65-4ACB-9325-382D7F864F62",
-#         "position": ["41024", "35104"],
-#         "caption": "The tissue image reveals dense cellular infiltration, suggesting inflammation, and cells with large, hyperchromatic nuclei and high nuclear-to-cytoplasmic ratios indicative of a neoplastic process. Pink, acellular material points to fibrosis or connective tissue. The disrupted architecture further supports a pathological condition, possibly cancer combined with fibrotic changes."
-#     },
-#     {
-#         "WSI_id": "TCGA-55-8621-01Z-00-DX1.7C519007-D59D-432A-BF4D-23D14A1C8BB6",
-#         "position": ["13280", "13056"],
-#         "caption": "The lung tissue image displays myofibroblasts with elongated nuclei and eosinophilic cytoplasm, indicative of collagen-rich fibrosis. Epithelial cells, forming glandular structures, show cellular atypia. The architecture is disrupted by dense fibrotic areas and patchy cellular infiltration, suggesting an interstitial lung disease characterized by chronic fibrosis and inflammation. Hemorrhage or hemosiderin deposits are not evident."
-#     },
-#     {
-#         "WSI_id": "TCGA-AH-6547-01Z-00-DX1.73040c3e-8219-4d21-88f2-613218d32297",
-#         "position": ["5472", "8320"],
-#         "caption": "The tissue shows irregular, atypical glandular structures indicative of adenocarcinoma, with hyperchromatic nuclei, high nuclear-to-cytoplasmic ratio, and pleomorphism. Desmoplastic stroma and mitotic figures suggest high-grade dysplasia. These features confirm a diagnosis of malignant adenocarcinoma of the rectum, characterized by loss of normal glandular architecture and cellular disorganization."
-#     }
-# ]
+data = [
+     {
+         "WSI_id": "TCGA-22-5474-01Z-00-DX1.8736FB24-7E65-4ACB-9325-382D7F864F62",
+         "position": ["41024", "35104"],
+         "caption": "The tissue image reveals dense cellular infiltration, suggesting inflammation, and cells with large, hyperchromatic nuclei and high nuclear-to-cytoplasmic ratios indicative of a neoplastic process. Pink, acellular material points to fibrosis or connective tissue. The disrupted architecture further supports a pathological condition, possibly cancer combined with fibrotic changes.",
+         "file_id": "4cff975b-adbe-4ecf-9be5-365c715e2305"
+     },
+     {
+         "WSI_id": "TCGA-55-8621-01Z-00-DX1.7C519007-D59D-432A-BF4D-23D14A1C8BB6",
+         "position": ["13280", "13056"],
+         "caption": "The lung tissue image displays myofibroblasts with elongated nuclei and eosinophilic cytoplasm, indicative of collagen-rich fibrosis. Epithelial cells, forming glandular structures, show cellular atypia. The architecture is disrupted by dense fibrotic areas and patchy cellular infiltration, suggesting an interstitial lung disease characterized by chronic fibrosis and inflammation. Hemorrhage or hemosiderin deposits are not evident.",
+         "file_id": "c362b1ce-0af7-43a4-80f5-43d849262abc"
+     },
+     {
+         "WSI_id": "TCGA-AH-6547-01Z-00-DX1.73040c3e-8219-4d21-88f2-613218d32297",
+         "position": ["5472", "8320"],
+         "caption": "The tissue shows irregular, atypical glandular structures indicative of adenocarcinoma, with hyperchromatic nuclei, high nuclear-to-cytoplasmic ratio, and pleomorphism. Desmoplastic stroma and mitotic figures suggest high-grade dysplasia. These features confirm a diagnosis of malignant adenocarcinoma of the rectum, characterized by loss of normal glandular architecture and cellular disorganization.",
+         "file_id": "32abfee5-daea-4816-8c24-122dbf593aff"
+     }
+ ]
 pathgen_data_path = 'PathGen-1.6M.json'
 with open(pathgen_data_path, 'r') as f:
     data = json.load(f)
