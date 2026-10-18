@@ -1,0 +1,83 @@
+import os
+import json
+from PIL import Image
+import openslide
+
+#This is the PATHGEN code from the PATHGEN github
+# Define paths and configuration
+WSI_DIR = "/path/to/your/wsi/files"  # Update this to the directory containing your WSI files
+OUTPUT_DIR = "./output"  # Directory where patches and captions will be saved
+PATCH_SIZE = (672, 672)  # Size of the patch to extract
+
+# Ensure output directory exists
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+# Load the list of WSIs with positions and captions
+# data = [
+#     {
+#         "WSI_id": "TCGA-22-5474-01Z-00-DX1.8736FB24-7E65-4ACB-9325-382D7F864F62",
+#         "position": ["41024", "35104"],
+#         "caption": "The tissue image reveals dense cellular infiltration, suggesting inflammation, and cells with large, hyperchromatic nuclei and high nuclear-to-cytoplasmic ratios indicative of a neoplastic process. Pink, acellular material points to fibrosis or connective tissue. The disrupted architecture further supports a pathological condition, possibly cancer combined with fibrotic changes."
+#     },
+#     {
+#         "WSI_id": "TCGA-55-8621-01Z-00-DX1.7C519007-D59D-432A-BF4D-23D14A1C8BB6",
+#         "position": ["13280", "13056"],
+#         "caption": "The lung tissue image displays myofibroblasts with elongated nuclei and eosinophilic cytoplasm, indicative of collagen-rich fibrosis. Epithelial cells, forming glandular structures, show cellular atypia. The architecture is disrupted by dense fibrotic areas and patchy cellular infiltration, suggesting an interstitial lung disease characterized by chronic fibrosis and inflammation. Hemorrhage or hemosiderin deposits are not evident."
+#     },
+#     {
+#         "WSI_id": "TCGA-AH-6547-01Z-00-DX1.73040c3e-8219-4d21-88f2-613218d32297",
+#         "position": ["5472", "8320"],
+#         "caption": "The tissue shows irregular, atypical glandular structures indicative of adenocarcinoma, with hyperchromatic nuclei, high nuclear-to-cytoplasmic ratio, and pleomorphism. Desmoplastic stroma and mitotic figures suggest high-grade dysplasia. These features confirm a diagnosis of malignant adenocarcinoma of the rectum, characterized by loss of normal glandular architecture and cellular disorganization."
+#     }
+# ]
+pathgen_data_path = 'PathGen-1.6M.json'
+with open(pathgen_data_path, 'r') as f:
+    data = json.load(f)
+
+def extract_patch_from_wsi(wsi_path, position, patch_size):
+    """
+    Extracts a patch from the WSI at the specified position.
+
+    :param wsi_path: Path to the WSI file.
+    :param position: Tuple of (x, y) coordinates.
+    :param patch_size: Size of the patch to extract.
+    :return: Extracted patch as a PIL Image.
+    """
+    try:
+        # Load WSI using OpenSlide
+        wsi = openslide.OpenSlide(wsi_path)
+        x, y = map(int, position)  # Convert position coordinates to integers
+        patch = wsi.read_region((x, y), 0, patch_size)  # Extract patch
+        return patch
+    except Exception as e:
+        print(f"Error extracting patch from {wsi_path} at {position}: {e}")
+        return None
+
+
+# Process each WSI and its corresponding data
+for item in data:
+    wsi_id = item['WSI_id']
+    position = item['position']
+    caption = item['caption']
+
+    # Construct the full path to the WSI file
+    wsi_path = os.path.join(WSI_DIR, f"{wsi_id}.svs")  # Update extension if different
+
+    # Extract the patch
+    patch = extract_patch_from_wsi(wsi_path, position, PATCH_SIZE)
+
+    if patch:
+        # Save the patch as an image file
+        patch_filename = f"{wsi_id}_{position[0]}_{position[1]}.png"
+        patch_path = os.path.join(OUTPUT_DIR, patch_filename)
+        patch.save(patch_path)
+
+        # Save the caption in a text file
+        caption_filename = f"{wsi_id}_{position[0]}_{position[1]}.txt"
+        caption_path = os.path.join(OUTPUT_DIR, caption_filename)
+        with open(caption_path, 'w') as caption_file:
+            caption_file.write(caption)
+
+        print(f"Extracted and saved patch and caption for {wsi_id} at position {position}")
+    else:
+        print(f"Failed to extract patch for {wsi_id} at position {position}")
