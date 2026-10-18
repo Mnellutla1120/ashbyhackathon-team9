@@ -5,14 +5,19 @@ import openslide
 
 #This is the PATHGEN code from the PATHGEN github
 # Define paths and configuration
-WSI_DIR = "/path/to/your/wsi/files"  # Update this to the directory containing your WSI files
-OUTPUT_DIR = "./output"  # Directory where patches and captions will be saved
-PATCH_SIZE = (400, 400)  # Size of the patch to extract
+WSI_PATH = "Image3.svs"  # Update this to the directory containing your WSI files
+OUTPUT_DIR = "./conch_patches_roi400"  # Directory where patches and captions will be saved
+#PATCH_SIZE = (400, 400)  # Size of the patch to extract
 
+ROI_ORIGIN_X = 10024
+ROI_ORIGIN_Y = 11104
+#POSITION = ("11024", "15104")
+ROI_SIZE = (1600,1600)
 # Ensure output directory exists
-os.makedirs(OUTPUT_DIR, exist_ok=True)
-
+#os.makedirs(OUTPUT_DIR, exist_ok=True)
+#CAPTION = ("The tissue image reveals dense cellular infiltration, suggesting inflammation cells with large, hyperchromatic nuclei and high nuclear-to-cytoplasmic ratios indicative of a neoplastic process. Pink, acellular material points to fibrosis or connective tissue. The disrupted architecture further supports a pathological condition, possibly cancer combined with fibrotic changes.")
 # Load the list of WSIs with positions and captions
+'''
 data = [
      {
          "WSI_id": "TCGA-22-5474-01Z-00-DX1.8736FB24-7E65-4ACB-9325-382D7F864F62",
@@ -36,8 +41,15 @@ data = [
 pathgen_data_path = 'PathGen-1.6M.json'
 with open(pathgen_data_path, 'r') as f:
     data = json.load(f)
+'''
+CROP_SIZE = 400
+STRIDE = 200
 
-def extract_patch_from_wsi(wsi_path, position, patch_size):
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+patches_dir = os.path.join(OUTPUT_DIR, "patches")
+os.makedirs(patches_dir, exist_ok=True)
+
+def extract_400px_grid(wsi_path, origin, roi_size, crop_size, stride):
     """
     Extracts a patch from the WSI at the specified position.
 
@@ -46,19 +58,63 @@ def extract_patch_from_wsi(wsi_path, position, patch_size):
     :param patch_size: Size of the patch to extract.
     :return: Extracted patch as a PIL Image.
     """
-    try:
+    #try:
         # Load WSI using OpenSlide
-        wsi = openslide.OpenSlide(wsi_path)
-        x, y = map(int, position)  # Convert position coordinates to integers
-        patch = wsi.read_region((x, y), 0, patch_size)  # Extract patch
-        return patch
-    except Exception as e:
-        print(f"Error extracting patch from {wsi_path} at {position}: {e}")
-        return None
+        #wsi = openslide.OpenSlide(wsi_path)
+        #x, y = int(position[0]), int(position[1])  # Convert position coordinates to integers
+        #patch = wsi.read_region((x, y), 0, patch_size)  # Extract patch
+        #return patch.convert("RGB")
+    #except Exception as e:
+        #print(f"Error extracting patch from {wsi_path} at {position}: {e}")
+        #return None
+    wsi = openslide.OpenSlide(wsi_path)
+    ox, oy = origin
+    roi_w, roi_h = roi_size
+    master_roi = wsi.read_region((ox, oy), 0, (roi_w, roi_h)).convert("RGB")
+    roi_save_path = os.path.join(OUTPUT_DIR, "master_patch.png")
+    master_roi.save(roi_save_path)
+
+    grid_h = (roi_h - crop_size) // stride + 1
+    grid_w = (roi_w - crop_size) // stride + 1
+
+    metadata = {
+        "wsi_file": os.path.basename(wsi_path),
+        "roi_origin": [ox, oy],
+        "roi_dimensions": [roi_w, roi_h],
+        "crop_size": crop_size,
+        "stride": stride,
+        "grid_shape": [grid_h, grid_w], #[7,7]
+        "tiles": []
+    }
+
+    #slice 400x400 tiles
+    row_idx = 0
+    for y in range(0, roi_h - crop_size + 1, stride):
+        col_idx = 0
+        for x in range(0, roi_w - crop_size + 1, stride):
+            crop = master_roi.crop((x, y, x+crop_size, y + crop_size))
+            patch_name = f"{row_idx:02d}_{col_idx:02d}.png"
+            crop.save(os.path.join(patches_dir, patch_name))
+
+            metadata["tiles"].append({
+                "filename": patch_name,
+                "grid_row": row_idx,
+                "grid_col": col_idx,
+                "roi_rel_coords": [x,y],
+                "abs_wsi_coords": [ox + x, oy + y]
+            })
+            col_idx += 1
+        row_idx += 1
+    meta_path = os.path.join(OUTPUT_DIR, "grid_metadata.json")
+    with open(meta_path, "w") as f:
+        json.dump(metadata, f, indent=2)
+if __name__ == "__main__":
+    extract_400px_grid(WSI_PATH, (ROI_ORIGIN_X, ROI_ORIGIN_Y), ROI_SIZE, CROP_SIZE, STRIDE)
+
 
 
 # Process each WSI and its corresponding data
-for item in data:
+'''for item in data:
     wsi_id = item['WSI_id']
     position = item['position']
     caption = item['caption']
@@ -67,20 +123,22 @@ for item in data:
     wsi_path = os.path.join(WSI_DIR, f"{wsi_id}.svs")  # Update extension if different
 
     # Extract the patch
-    patch = extract_patch_from_wsi(wsi_path, position, PATCH_SIZE)
+'''
+'''patch = extract_patch_from_wsi(WSI_PATH, POSITION, PATCH_SIZE)
 
-    if patch:
-        # Save the patch as an image file
-        patch_filename = f"{wsi_id}_{position[0]}_{position[1]}.png"
-        patch_path = os.path.join(OUTPUT_DIR, patch_filename)
-        patch.save(patch_path)
+if patch:
+    # Save the patch as an image file
+    patch_filename = f"patch_{POSITION[0]}_{POSITION[1]}.png"
+    patch_save_path = os.path.join(OUTPUT_DIR, patch_filename)
+    patch.save(patch_save_path)
 
-        # Save the caption in a text file
-        caption_filename = f"{wsi_id}_{position[0]}_{position[1]}.txt"
-        caption_path = os.path.join(OUTPUT_DIR, caption_filename)
-        with open(caption_path, 'w') as caption_file:
-            caption_file.write(caption)
+    # Save the caption in a text file
+    #caption_filename = f"{wsi_id}_{position[0]}_{position[1]}.txt"
+    #caption_save_path = os.path.join(OUTPUT_DIR, f"patch_{POSITION[0]}_{POSITION[1]}.txt")
+    #with open(caption_save_path, 'w', encoding="utf-8") as f:
+    #    f.write(CAPTION)
 
-        print(f"Extracted and saved patch and caption for {wsi_id} at position {position}")
-    else:
-        print(f"Failed to extract patch for {wsi_id} at position {position}")
+    print(f"Extracted and saved patch")
+else:
+    print(f"Failed to extract patch")
+    '''
