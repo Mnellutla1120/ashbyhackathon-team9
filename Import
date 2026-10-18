@@ -19,4 +19,4 @@ def download_gdc_slide(file_id: str, output_path: str):
 
 # Example usage:
 # download_gdc_slide("22a29915-6712-4f7a-8dba-985ae9a1f005", "slide_1.svs")
-download_gdc_slide("32abfee5-daea-4816-8c24-122dbf593aff", "Image3.svs")
+download_gdc_slide("4cff975b-adbe-4ecf-9be5-365c715e2305", "Image1.svs")
