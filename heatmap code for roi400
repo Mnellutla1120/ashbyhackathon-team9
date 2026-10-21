@@ -1,0 +1,297 @@
+
+import numpy as np
+import torch
+import csv
+import re
+from pathlib import Path
+from PIL import Image
+import matplotlib.pyplot as plt
+from IPython.display import display
+from conch.open_clip_custom import tokenize, get_tokenizer
+
+# ============================================================
+# MANUAL EDIT: Input/output paths
+# ============================================================
+TILES_FOLDER = Path("/content/tiles")
+MASTER_IMAGE_PATH = Path("/content/master_image.png")
+OUTPUT_FOLDER = Path("/content/heatmap_outputs")
+
+# ============================================================
+# MANUAL EDIT: Enter your three prompts
+# ============================================================
+prompt_data = [
+    "adenocarcinoma",
+    "lung adenocarcinoma",
+    "squamous cell carcinoma"
+]
+
+# ============================================================
+# MANUAL EDIT: Tiling parameters
+# Your metadata specifies 400x400 tiles with stride 200.
+# ============================================================
+STRIDE = 200
+
+# ============================================================
+# MANUAL EDIT (optional): Heatmap appearance and batch size
+# Alpha ranges from 0 (invisible) to 255 (opaque).
+# ============================================================
+OVERLAY_ALPHA = 120
+BATCH_SIZE = 8
+COLORMAPS = ["Blues", "Oranges", "Greens"]
+
+OUTPUT_FOLDER.mkdir(parents=True, exist_ok=True)
+
+# ------------------------------------------------------------
+# 1. Load tiles and extract their row/column positions
+# Naming convention: 00_00.png, 00_01.png, etc.
+# ------------------------------------------------------------
+tile_records = []
+
+for path in TILES_FOLDER.glob("*.png"):
+    match = re.fullmatch(r"(\d+)_(\d+)", path.stem)
+    if match:
+        row, col = map(int, match.groups())
+        tile_records.append((row, col, path))
+
+tile_records.sort(key=lambda x: (x[0], x[1]))
+
+if not tile_records:
+    raise ValueError("No valid tiles found in the tiles folder.")
+
+positions = [(row, col) for row, col, _ in tile_records]
+if len(positions) != len(set(positions)):
+    raise ValueError("Multiple files have the same row/column position.")
+
+num_rows = max(row for row, col, path in tile_records) + 1
+num_cols = max(col for row, col, path in tile_records) + 1
+
+print(f"Loaded {len(tile_records)} tiles")
+print(f"Grid shape: {num_rows} rows x {num_cols} columns")
+
+if len(tile_records) != num_rows * num_cols:
+    print("Warning: Some tile positions are missing.")
+
+# ------------------------------------------------------------
+# 2. Load the existing master image
+# ------------------------------------------------------------
+master_image = Image.open(MASTER_IMAGE_PATH).convert("RGBA")
+master_width, master_height = master_image.size
+
+with Image.open(tile_records[0][2]) as example_tile:
+    tile_width, tile_height = example_tile.size
+
+expected_width = (num_cols - 1) * STRIDE + tile_width
+expected_height = (num_rows - 1) * STRIDE + tile_height
+
+if (master_width, master_height) != (expected_width, expected_height):
+    raise ValueError(
+        f"Master image is {master_width}x{master_height}, "
+        f"but tile positions imply {expected_width}x{expected_height}. "
+        "Check STRIDE, filenames, and master image."
+    )
+
+print(f"Master image: {master_width} x {master_height}")
+
+# ------------------------------------------------------------
+# 3. Create the text embeddings (same as starter code)
+# ------------------------------------------------------------
+templates = [
+    "CLASSNAME.",
+    "a photomicrograph showing CLASSNAME.",
+    "a photomicrograph of CLASSNAME.",
+    "an image of CLASSNAME.",
+    "an image showing CLASSNAME.",
+    "an example of CLASSNAME.",
+    "CLASSNAME is shown.",
+    "this is CLASSNAME.",
+    "there is CLASSNAME.",
+    "a histopathological image showing CLASSNAME.",
+    "a histopathological image of CLASSNAME.",
+    "a histopathological photograph of CLASSNAME.",
+    "a histopathological photograph showing CLASSNAME.",
+    "shows CLASSNAME.",
+    "presence of CLASSNAME.",
+    "CLASSNAME is present.",
+    "an H&E stained image of CLASSNAME.",
+    "an H&E stained image showing CLASSNAME.",
+    "an H&E image showing CLASSNAME.",
+    "an H&E image of CLASSNAME.",
+    "CLASSNAME, H&E stain.",
+    "CLASSNAME, H&E."
+]
+
+model.eval()
+device = next(model.parameters()).device
+tokenizer = get_tokenizer()
+
+class_embeddings = {}
+
+with torch.inference_mode():
+    for prompt in prompt_data:
+        all_prompts = [
+            template.replace("CLASSNAME", prompt)
+            for template in templates
+        ]
+
+        tokens = tokenize(tokenizer, all_prompts).to(device)
+        text_embs = model.encode_text(tokens)
+
+        text_embs = torch.nn.functional.normalize(
+            text_embs, dim=-1
+        )
+
+        mean_emb = text_embs.mean(dim=0, keepdim=True)
+
+        class_embeddings[prompt] = torch.nn.functional.normalize(
+            mean_emb, dim=-1
+        )
+
+    text_features = torch.cat(
+        [class_embeddings[p] for p in prompt_data], dim=0
+    )
+
+print("Text embeddings generated.")
+
+# ------------------------------------------------------------
+# 4. Run CONCH on every tile
+# Each tile gets one independent similarity score per prompt.
+# ------------------------------------------------------------
+category_tiles = {prompt: [] for prompt in prompt_data}
+tile_results = []
+
+with torch.inference_mode():
+    for start in range(0, len(tile_records), BATCH_SIZE):
+        batch_records = tile_records[start:start + BATCH_SIZE]
+
+        images = []
+
+        for row, col, path in batch_records:
+            with Image.open(path) as img:
+                if img.size != (tile_width, tile_height):
+                    raise ValueError(f"Unexpected tile size: {path.name}")
+                images.append(preprocess(img.convert("RGB")))
+
+        image_batch = torch.stack(images).to(device)
+
+        image_embs = model.encode_image(
+            image_batch,
+            proj_contrast=True,
+            normalize=True
+        )
+
+        # Raw cosine similarities: no softmax across prompts
+        similarities = (
+            image_embs.float() @ text_features.float().T
+        ).cpu().numpy()
+
+        for (row, col, path), scores in zip(
+            batch_records, similarities
+        ):
+            tile_results.append((row, col, path.name, scores))
+
+            for prompt, score in zip(prompt_data, scores):
+                category_tiles[prompt].append(float(score))
+
+        print(
+            f"Processed {min(start + BATCH_SIZE, len(tile_records))}"
+            f"/{len(tile_records)} tiles"
+        )
+
+# ------------------------------------------------------------
+# 5. Save raw tile similarity scores to CSV
+# ------------------------------------------------------------
+csv_path = OUTPUT_FOLDER / "tile_similarity_scores.csv"
+
+with open(csv_path, "w", newline="") as f:
+    writer = csv.writer(f)
+    writer.writerow(["filename", "row", "col"] + prompt_data)
+
+    for row, col, filename, scores in tile_results:
+        writer.writerow(
+            [filename, row, col] + [float(s) for s in scores]
+        )
+
+print(f"Saved similarity scores: {csv_path}")
+
+# ------------------------------------------------------------
+# 6. Generate spatial heatmaps for each prompt
+# Overlapping regions receive the average score of all
+# tiles covering that pixel.
+# ------------------------------------------------------------
+for prompt_idx, prompt in enumerate(prompt_data):
+
+    score_sum = np.zeros(
+        (master_height, master_width), dtype=np.float32
+    )
+    coverage = np.zeros(
+        (master_height, master_width), dtype=np.float32
+    )
+
+    for row, col, filename, scores in tile_results:
+        x = col * STRIDE
+        y = row * STRIDE
+
+        score = float(scores[prompt_idx])
+
+        score_sum[y:y+tile_height, x:x+tile_width] += score
+        coverage[y:y+tile_height, x:x+tile_width] += 1
+
+    valid = coverage > 0
+
+    score_map = np.full(
+        (master_height, master_width), np.nan, dtype=np.float32
+    )
+    score_map[valid] = score_sum[valid] / coverage[valid]
+
+    # Save raw spatial scores for later analysis
+    np.save(
+        OUTPUT_FOLDER / f"score_map_prompt_{prompt_idx+1}.npy",
+        score_map
+    )
+
+    # Normalize for visualization only, independently
+    # for each prompt. Raw similarity scores are unchanged.
+    vmin = float(np.min(score_map[valid]))
+    vmax = float(np.max(score_map[valid]))
+
+    normalized = np.zeros_like(score_map)
+
+    if vmax > vmin:
+        normalized[valid] = (
+            (score_map[valid] - vmin) / (vmax - vmin)
+        )
+    else:
+        normalized[valid] = 0.5
+
+    cmap = plt.get_cmap(COLORMAPS[prompt_idx % len(COLORMAPS)])
+    rgba = (cmap(normalized) * 255).astype(np.uint8)
+
+    # Transparent outside regions covered by tiles
+    rgba[..., 3] = np.where(valid, OVERLAY_ALPHA, 0)
+
+    heatmap_image = Image.fromarray(rgba, mode="RGBA")
+
+    # Save transparent heatmap (same size as master image)
+    heatmap_path = (
+        OUTPUT_FOLDER / f"heatmap_prompt_{prompt_idx+1}.png"
+    )
+    heatmap_image.save(heatmap_path)
+
+    # Overlay heatmap on existing master image
+    composite = Image.alpha_composite(
+        master_image, heatmap_image
+    )
+
+    composite_path = (
+        OUTPUT_FOLDER / f"overlay_prompt_{prompt_idx+1}.png"
+    )
+    composite.convert("RGB").save(composite_path)
+
+    print(f"\nPrompt {prompt_idx+1}: {prompt}")
+    print(f"Similarity range: {vmin:.4f} to {vmax:.4f}")
+    print(f"Saved: {heatmap_path.name}")
+    print(f"Saved: {composite_path.name}")
+
+    display(composite)
+
+print("\nAll three heatmaps generated successfully.")
