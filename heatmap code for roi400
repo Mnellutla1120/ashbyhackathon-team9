@@ -12,13 +12,14 @@ from conch.open_clip_custom import tokenize, get_tokenizer
 # ============================================================
 # MANUAL EDIT: Input/output paths
 # ============================================================
-TILES_FOLDER = Path("/content/tiles")
-MASTER_IMAGE_PATH = Path("/content/master_image.png")
+TILES_FOLDER = Path("/conch_patches_roi400/patches")
+MASTER_IMAGE_PATH = Path("/conch_patches_roi400/master_patch.png")
 OUTPUT_FOLDER = Path("/content/heatmap_outputs")
 
 # ============================================================
 # MANUAL EDIT: Enter your three prompts
 # ============================================================
+#Need to update to connect with front end
 prompt_data = [
     "adenocarcinoma",
     "lung adenocarcinoma",
@@ -291,7 +292,7 @@ for prompt_idx, prompt in enumerate(prompt_data):
     print(f"Similarity range: {vmin:.4f} to {vmax:.4f}")
     print(f"Saved: {heatmap_path.name}")
     print(f"Saved: {composite_path.name}")
-
+#this is where the data needs to send to
     display(composite)
 
 print("\nAll three heatmaps generated successfully.")
